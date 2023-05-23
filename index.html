@@ -1,0 +1,44 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Twitch Chat</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #chatFrame {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <iframe id="chatFrame" src="https://xn--e1ajbkccewgd.xn--p1ai/?id=6463d39850d1e83093279177"></iframe>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    socket.on('diceRoll', (num) => {
+      const chatFrame = document.getElementById('chatFrame');
+      chatFrame.src = chatFrame.src;
+
+      console.log(`You rolled a ${num}`);
+    });
+
+    socket.on('connect', () => {
+      console.log('Connected to server.');
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from server.');
+    });
+  </script>
+</body>
+</html>
