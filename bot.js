@@ -13,6 +13,34 @@ const dbPool = new Pool({
   connectionString: 'postgresql://localhost/twitch_development'
 });
 
+const GAME_CONTEXT_ID = '6463d39850d1e83093279177';
+
+async function createGamesTable() {
+  try {
+    const dbClient = await dbPool.connect();
+    const result = await dbClient.query(`
+      SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'games')
+    `);
+    const exists = result.rows[0].exists;
+
+    if (!exists) {
+      await dbClient.query(`
+        CREATE TABLE games (
+          id SERIAL PRIMARY KEY,
+          context_id VARCHAR(255)
+        )
+      `);
+      console.log('Table "games" created');
+    } else {
+      console.log('Table "games" already exists');
+    }
+
+    dbClient.release();
+  } catch (error) {
+    console.error('Error creating table "games":', error);
+  }
+}
+
 async function createMessagesTable() {
   try {
     const dbClient = await dbPool.connect();
@@ -26,7 +54,8 @@ async function createMessagesTable() {
         CREATE TABLE messages (
           id SERIAL PRIMARY KEY,
           user_name VARCHAR(255),
-          message TEXT
+          message TEXT,
+          game_id INTEGER
         )
       `);
       console.log('Table "messages" created');
@@ -39,6 +68,7 @@ async function createMessagesTable() {
     console.error('Error creating table "messages":', error);
   }
 }
+
 
 async function createDatabase() {
   try {
@@ -64,8 +94,27 @@ async function createDatabase() {
   }
 }
 
+async function createGame() {
+  try {
+    const dbClient = await dbPool.connect();
+    const result = await dbClient.query('SELECT id FROM games WHERE context_id = $1', [GAME_CONTEXT_ID]);
+
+    if (result.rows.length === 0) {
+      const insertResult = await dbClient.query('INSERT INTO games (context_id) VALUES ($1) RETURNING id', [GAME_CONTEXT_ID]);
+      const gameId = insertResult.rows[0].id;
+      console.log(`Game created with id ${gameId}`);
+    }
+
+    dbClient.release();
+  } catch (error) {
+    console.error('Error creating game:', error);
+  }
+}
+
 createDatabase();
+createGamesTable();
 createMessagesTable();
+createGame();
 
 const opts = {
   identity: {
@@ -91,7 +140,7 @@ async function onMessageHandler(target, context, msg, self) {
   // Проверить, что сообщение состоит из одного слова и этого слова нет в базе данных
   // Если условие выполняется, то сохранить сообщение в базу данных
   if (commandName.split(' ').length === 1) {
-    const result = await dbPool.query('SELECT * FROM messages WHERE message = $1', [commandName]);
+    const result = await dbPool.query('SELECT * FROM messages WHERE message = $1 AND game_id IN (SELECT id FROM games WHERE context_id = $2)', [commandName, GAME_CONTEXT_ID]);
     if (result.rows.length === 0) {
       saveMessageToDB(context.username, commandName);
     }
@@ -109,11 +158,20 @@ async function onMessageHandler(target, context, msg, self) {
 
 async function saveMessageToDB(username, message) {
   try {
-    await dbPool.query('INSERT INTO messages (user_name, message) VALUES ($1, $2)', [
-      username,
-      message
-    ]);
-    console.log(`* Saved chat message: ${username}: ${message}`);
+    const dbClient = await dbPool.connect();
+    const result = await dbClient.query('SELECT id FROM games WHERE context_id = $1', [GAME_CONTEXT_ID]);
+
+    if (result.rows.length > 0) {
+      const gameId = result.rows[0].id;
+      await dbClient.query('INSERT INTO messages (user_name, message, game_id) VALUES ($1, $2, $3)', [
+        username,
+        message,
+        gameId
+      ]);
+      console.log(`* Saved chat message: ${username}: ${message}`);
+    }
+
+    dbClient.release();
   } catch (error) {
     console.error('Error saving chat message:', error);
   }
@@ -125,8 +183,16 @@ function onConnectedHandler(addr, port) {
 
 async function handleDiceCommand(username, num) {
   try {
-    io.emit('diceRoll', num);
-    console.log(`* Emulated dice roll: ${username} rolled a ${num}`);
+    const dbClient = await dbPool.connect();
+    const result = await dbClient.query('SELECT id FROM games WHERE context_id = $1', [GAME_CONTEXT_ID]);
+
+    if (result.rows.length > 0) {
+      const gameId = result.rows[0].id;
+      io.emit('diceRoll', { username, num, gameId });
+      console.log(`* Emulated dice roll: ${username} rolled a ${num}`);
+    }
+
+    dbClient.release();
   } catch (error) {
     console.error('Error handling dice command:', error);
   }
