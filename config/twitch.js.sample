@@ -1,0 +1,11 @@
+const opts = {
+  identity: {
+    username: 'kalesko',
+    password: 'asdasdasdadasdasdadsaasdas'
+  },
+  channels: ['kalesko']
+};
+
+module.exports = {
+  opts
+};

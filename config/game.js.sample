@@ -1,0 +1,9 @@
+const GAME_CONTEXT_ID = '646e9232f56e9d0ad0763273';
+const CHALLENGE_TYPE = 'unofficial'; // unofficial official
+const USER_ID = 'e0e4f397-e9eb-4c9a-a786-b4556fa2b46d';
+
+module.exports = {
+  GAME_CONTEXT_ID,
+  CHALLENGE_TYPE,
+  USER_ID
+};
