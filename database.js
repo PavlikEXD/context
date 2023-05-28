@@ -1,6 +1,6 @@
 // database.js
 const { Pool } = require('pg');
-const { GAME_CONTEXT_ID } = require('./config/game.js.sample');
+const { GAME_CONTEXT_ID } = require('./config/game.js');
 
 const dbPool = new Pool({
   connectionString: 'postgresql://localhost/twitch_development'

@@ -7,8 +7,8 @@ const axios = require('axios');
 const { Pool } = require('pg');
 
 const { createGamesTable, createMessagesTable, createDatabase, createGame, saveMessageToDB, isWordNew, getGameId } = require('./database');
-const { CHALLENGE_TYPE, USER_ID, GAME_CONTEXT_ID } = require('./config/game.js.sample');
-const { opts } = require('./config/twitch.js.sample');
+const { CHALLENGE_TYPE, USER_ID, GAME_CONTEXT_ID } = require('./config/game.js');
+const { opts } = require('./config/twitch.js');
 
 const app = express();
 const server = http.createServer(app);
